@@ -20,13 +20,14 @@ from std_msgs.msg import Bool
 from std_msgs.msg import UInt8 
  
 
- 
+filterered_data_points  = SphereParams() 
+motion_check = Bool()
  
 # Set values to SphereParam after doing filtering 
 def get_sphere_params(data): 
     global filterered_data_points 
  
-    filterered_data_points.xc = data.xc 
+    filterered_data_points.xc = data.xc
     filterered_data_points.yc = data.yc 
     filterered_data_points.zc = data.zc 
     filterered_data_points.radius = data.radius 
@@ -46,13 +47,14 @@ def set_new_params(plan, new_x, new_y, new_z, mode):
     plan_point.angular.z = 1.530
  
     #mode =0 - Regular Motion Mode, 1 - Open the gripper, 2 - Close the gripper 
-    point_mode.data = mode 
-    plan.modes.append(point_mode) 
+    #point_mode.data = mode 
  
     # add this point to the plan 
     plan.points.append(plan_point) 
+    #plan.modes.append(point_mode) 
     
-    print("This is the plan point /n", plan_point)
+    print("This is the plan point \n", plan_point)
+    return plan
  
  
 def check_stuff(data):
@@ -84,14 +86,18 @@ if __name__ == '__main__':
  
     tfBuffer = tf2_ros.Buffer() 
     listener = tf2_ros.TransformListener(tfBuffer) 
+    
+    q_rot = Quaternion()
  
-    plan.points.append(set_new_params(-0.598, -0.127, 0.36)) 
+ 
+    plan = set_new_params(plan, -0.016, -0.406, 0.429, 0)  
  
     start_x = -0.016
     start_y = -0.406
     start_z = 0.429
  
     flag = False 
+
     while not rospy.is_shutdown(): 
  
         # try getting the most update transformation between the tool frame and the base frame 
@@ -122,37 +128,35 @@ if __name__ == '__main__':
         # convert the 3D point to the base frame coordinates 
         pt_in_base = tfBuffer.transform(pt_in_tool, 'base', rospy.Duration(1.0)) 
  
-        print('Test point in the TOOL frame:  x= ', format(pt_in_tool.point.x, '.3f'), '(m), y= ', 
-              format(pt_in_tool.point.y, '.3f'), '(m), z= ', format(pt_in_tool.point.z, '.3f'), '(m)') 
-        print('Transformed point in the BASE frame:  x= ', format(pt_in_base.point.x, '.3f'), '(m), y= ', 
-              format(pt_in_base.point.y, '.3f'), '(m), z= ', format(pt_in_base.point.z, '.3f'), '(m)') 
+
  
         if flag == False: 
             # the_answers = the_magic() 
  
             #Directly Over Ball 
-            set_new_params(plan, pt_in_base.point.x, pt_in_base.point.y, start_z, 0) 
+            plan = set_new_params(plan, pt_in_base.point.x, pt_in_base.point.y, start_z, 0) 
  
-            #Over ball 
-            set_new_params(plan, pt_in_base.point.x, pt_in_base.point.y, pt_in_base.point.z, 0) 
+            #to ball 
+            plan = set_new_params(plan, pt_in_base.point.x, pt_in_base.point.y, pt_in_base.point.z, 0) 
+            
             #Close gripper 
-            set_new_params(plan, pt_in_base.point.x, pt_in_base.point.y, pt_in_base.point.z, 2) 
+            #plan = set_new_params(plan, pt_in_base.point.x, pt_in_base.point.y, pt_in_base.point.z, 2) 
  
             #Back up 
-            set_new_params(plan, pt_in_base.point.x, pt_in_base.point.y, start_z, 0) 
+            plan = set_new_params(plan, pt_in_base.point.x, pt_in_base.point.y, start_z, 0) 
  
             #Original Spot 
-            set_new_params(plan, start_x, start_y, start_z, 0) 
+            plan = set_new_params(plan, start_x, start_y, start_z, 0) 
  
             #Dropoff point 
-            set_new_params(plan, start_x, start_y, pt_in_base.point.z, 0) 
-            set_new_params(plan, start_x, start_y, pt_in_base.point.z, 1) 
+            plan = set_new_params(plan, start_x, start_y, pt_in_base.point.z, 0) 
+            #plan = set_new_params(plan, start_x, start_y, pt_in_base.point.z, 1) 
  
             flag = True 
             
            
         # publish the plan 
-        if motion_check:
+        if motion_check.data:
         	plan_pub.publish(plan) 
  
         # wait for 0.1 seconds until the next loop and repeat 
