@@ -56,7 +56,7 @@ def set_new_params(plan, new_x, new_y, new_z, mode):
     print("This is the plan point \n", plan_point)
     return plan
  
- 
+#You can use std_msgs/Bool for triggering motions from rqt_gui or pausing the ball tracking algorithm
 def check_stuff(data):
 	global motion_check
 	motion_check = data
@@ -73,7 +73,7 @@ if __name__ == '__main__':
     # Get sphere params 
     rospy.Subscriber('/sphere_params', SphereParams, get_sphere_params) 
     
-    #
+    #rqt_gui for pausing the ball
     rospy.Subscriber('/motion_starter', Bool, check_stuff) 
  
  
